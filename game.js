@@ -1,6 +1,27 @@
-import * as THREE from 'https://unpkg.com/three@0.177.0/build/three.module.js';
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const loader = new GLTFLoader();
+
+loader.load('./Cloud1.glb',
+    function(gltf){
+        const model = gltf.scene;
+        model.scale.set(1,1,1);
+        model.position.set(0,0,0)
+        scene.add(model);
+
+        console.log('Model loaded successfully');
+    },
+    function (xhr){
+        console.log((xhr.loaded/xhr.total * 100) + '% loaded');
+    },
+    function (error){
+        console.error('An error occured loading the model:', error);
+    }
+)
 
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -33,40 +54,6 @@ const skyMat = new THREE.ShaderMaterial({
 
 const sky = new THREE.Mesh(skyGeo, skyMat);
 scene.add(sky);
-
-function createClouds(){
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    const textureLoader = new THREE.TextureLoader();
-    const opacities = [];
-    const sprite = textureLoader.load('./Cloud.png');
-
-    for (let i = 0; i < 100; i++){
-        const x = Math.random() * 100-50;
-        const y = Math.random() * 20 + 10;
-        const z = Math.random() * 100 - 50;
-        vertices.push(x,y,z);
-
-        opacities.push(Math.random() * 0.4 + 0.2);
-    }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.setAttribute('opacity', new THREE.Float32BufferAttribute(opacities, 1))
-
-    const material = new THREE.PointsMaterial({
-        size: 5,
-        sizeAttenuation: true,
-        map: sprite,
-        alphaTest: 0.1,
-        transparent: true,
-        opacity: 1.0,
-        color: 0xffffff
-    });
-    const clouds = new THREE.Points(geometry, material);
-    return clouds;
-    
-}
-const clouds = createClouds();
-scene.add(clouds);
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
