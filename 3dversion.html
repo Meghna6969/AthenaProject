@@ -3,16 +3,125 @@
     <head>
         <title>Rock Paper Scissors Spock Lizard</title>
         <style>
-            *{
+            @font-face{
+                font-family: 'LuckiestGuy';
+                src: url('./LuckiestGuy.ttf') format('truetype');
+                font-weight: normal;
+                font-style: normal;
+            }
+            
+            html, body { 
                 margin: 0;
                 padding: 0;
-                box-sizing: border-box;
+                overflow: hidden;
+                
             }
-            html, body { margin: 0; height: 100%; overflow: hidden;}
-            canvas {display: block; width: 100%; height: 100%;}
+            canvas {display: block;
+            }
+            .overlay{
+                position: absolute;
+                top: 8%;
+                left: 50%;
+                transform: translate(-50%, 0%);
+                color: rebeccapurple;
+                font-family:'LuckiestGuy';
+                font-size: 24px;
+                z-index: 100;
+                text-align: center;
+            }
+            .rules{
+                position: absolute;
+                top: 50%;
+                left: 40px;
+                transform: translateY(-50%);
+                color: white;
+                font-family: 'LuckiestGuy';
+                font-size: 24px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+                z-index: 100;
+                text-align: left;
+                background-color: rgba(0,0,0,0.3);
+                padding: 20px;
+                border-radius: 10px;
+            }
+            .rules h2 {
+                margin-bottom: 1rem;
+                font-size: 32px;
+            }
+            .rules ul {
+                list-style: none;
+            }
+            .rules li {
+                margin-bottom: 0.5rem;
+            }
+            .overlay h1 {
+                margin: 0;
+                margin-bottom: 1rem;
+            }
+            .options {
+                position: absolute;
+                bottom: 2em;
+                left: 0;
+                right: 0;
+                z-index: 2;
+                margin-top: 0;
+                display: flex;
+                justify-content: space-around;
+            }
+            .options button {
+                background-color: purple;
+                color: #ffffff;
+                font-family: 'LuckiestGuy';
+                border: 2px solid #fff;
+                padding: 1em 2em;
+                border-radius: 10px;
+                width: 150px;
+                white-space: nowrap;
+                cursor: pointer;
+                outline: none;
+                transition: all 0.3s ease;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+
+            }
+            .options button:hover {
+                background-color: rgba(0, 139, 139, 0.9);
+                border: 2px solid #ffffff;
+                transform: translateY(-2px);
+                box-shadow: 0 6px 8px rgba(0,0,0,0.3);
+            }
+            .options button:active {
+                transform: translateY(1px);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            }
         </style>
     </head>
     <body>
+        <div class="overlay">
+            <h1>Rock Paper Scissors</h1>
+        </div>
+        <div class="rules">
+            <h2>Rules</h2>
+            <ul>
+                <li>Scissors cut paper</li>
+                <li>Paper covers Rock</li>
+                <li>Rock crushes Lizard</li>
+                <li>Lizard poisons Spock</li>
+                <li>Spock smashes scissors</li>
+                <li>Scissors decapitates Lizard</li>
+                <li>Lizard eats paper</li>
+                <li>Paper disproves Spock</li>
+                <li>Spock vaporizes Rock</li>
+                <li>Rock breaks Scissors</li>
+            </ul>
+        </div>
+        <div class="options">
+            <button type="button">Rock</button>
+            <button type="button">Paper</button>
+            <button type="button">Scissors</button>
+            <button type="button">Spock</button>
+            <button type="button">Lizard</button>
+        </div>
        <script type="importmap">
         {
             "imports": {

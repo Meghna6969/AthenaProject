@@ -6,6 +6,14 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
 const loader = new GLTFLoader();
 const renderer = new THREE.WebGLRenderer();
+const beforePlayModels = [];
+const MODEL_PATHS = {
+    'Rock': './Rock.glb',
+    'Paper': './Paper.glb',
+    'Scissors': './Scissors.glb',
+    'Spock': './Spock.glb',
+    'Lizard': './Lizard.glb'
+}
 
 const axesHelper = new THREE.AxesHelper(5);
 scene.add(axesHelper);
@@ -107,8 +115,49 @@ loader.load('./Cloud3.glb',
         scene.add(model);
     }
 )
-
-
+loader.load('./Cloud4.glb', 
+    function(gltf){
+        const model = gltf.scene;
+        model.scale.set(1,1,1);
+        model.position.set(30,-6,-150);
+        model.traverse((child) => {
+            if(child.isMesh){
+                child.material = toonMaterial2;
+            }
+        })
+        scene.add(model);
+    }
+)
+loader.load('./Rock.glb',
+    function(gltf){
+        const model = gltf.scene;
+        model.position.set(-0.5,0,-2);
+        model.scale.set(0.01,0.01,0.01);
+        model.traverse((child) => {
+            if(child.isMesh){
+                child.material.emissive = new THREE.Color(0xa35e48);
+                child.material.emissiveIntensity = 1;
+            }
+        })
+        beforePlayModels.push(model);
+        scene.add(model);
+    }
+)
+loader.load('./Rock.glb',
+    function(gltf){
+        const model = gltf.scene;
+        model.position.set(0.5,0,-2);
+        model.scale.set(-0.01,0.01,0.01);
+        model.traverse((child) => {
+            if(child.isMesh){
+                child.material.emissive = new THREE.Color(0xa35e48);
+                child.material.emissiveIntensity = 1;
+            }
+        })
+        beforePlayModels.push(model)
+        scene.add(model);
+    }
+)
 const vertexShader = `
  varying vec3 vWorldPosition;
  void main() {
@@ -156,6 +205,78 @@ scene.add(fillLight);
 
 camera.position.set(0,0,0);
 
+function shakeModels(callback) {
+    const duration = 500;
+    const startTime = Date.now();
+
+    function animate(){
+        const elasped = Date.now() - startTime;
+        const progress = elasped / duration;
+
+        if(progress < 1){
+            beforePlayModels.forEach(model => {
+                const offsetX = Math.sin(progress * Math.PI * 8) * 0.05;
+                const offsetY = Math.sin(progress * Math.PI * 6) * 0.05;
+
+                model.position.x = model.userData.originalX + offsetX;
+                model.position.y = model.userData.originalY + offsetY;
+            });
+            requestAnimationFrame(animate);
+        } else {
+            beforePlayModels.forEach(model => {
+                model.position.x = model.userData.originalX;
+                model.position.y = model.userData.originalY;
+            });
+            if(callback) callback();
+        }
+    }
+    beforePlayModels.forEach(model => {
+        model.userData.originalX = model.position.x;
+        model.userData.originalY = model.position.y;
+    });
+
+    animate();
+}
+async function switchModels(choice){
+    const leftPos = new THREE.Vector3(-0.5, 0, -2);
+    const rightPos = new THREE.Vector3(0.5, 0, -2);
+    const scale = 0.01;
+
+    beforePlayModels.forEach(model => {
+        scene.remove(model);
+    });
+    beforePlayModels.length = 0;
+
+    const [leftModel, rightModel] = await Promise.all([
+        loadModel(MODEL_PATHS[choice], leftPos, scale, false),
+        loadModel(MODEL_PATHS[choice], rightPos, scale, true)
+    ]);
+
+    scene.add(leftModel);
+    scene.add(rightModel);
+    beforePlayModels.push(leftModel, rightModel);
+}
+function loadModel(modelPath, position, scale, isFlipped = false){
+    return new Promise((resolve) => {
+        loader.load(modelPath, (gltf) => {
+            const model = gltf.scene;
+            model.position.copy(position);
+            model.scale.set(
+                isFlipped ? -scale : scale,
+                scale,
+                scale
+            );
+            model.traverse((child) => {
+                if(child.isMesh){
+                    child.material.emissive = new THREE.Color(0xa35e48);
+                    child.material.emissiveIntensity = 1;
+                }
+            });
+            resolve(model);
+        })
+    })
+}
+
 function animate(){
     requestAnimationFrame(animate);
     controls.update();
@@ -173,6 +294,14 @@ window.addEventListener('keydown', (event) => {
         console.log('Subtle movement mode enabled');
     }
 })
+document.querySelectorAll('.options button').forEach(button => {
+    button.addEventListener('click', () => {
+        const choice = button.textContent;
+        shakeModels(() => {
+            switchModels(choice);
+        });
+    });
+});
 
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;
