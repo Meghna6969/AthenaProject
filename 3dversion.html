@@ -34,13 +34,13 @@
                 top: 50%;
                 left: 40px;
                 transform: translateY(-50%);
-                color: white;
+                color: purple;
                 font-family: 'PhantomSans';
                 font-size: 24px;
                 
                 z-index: 100;
                 text-align: left;
-                background-color: rgba(255, 255, 255, 0.1);
+                background-color: rgba(255, 255, 255, 0.5);
                 padding: 20px;
                 border-radius: 16px;
                 border: 1px solid rgba(255, 255, 255, 0.2);
@@ -103,11 +103,35 @@
                 transform: translateY(1px);
                 box-shadow: 0 2px 4px rgba(0,0,0,0.2);
             }
+            .score{
+                display: flex;
+                justify-content: space-around;
+                width: 300px;
+                margin: 0 auto;
+                font-size: 20px;
+            }
+            .hand-label {
+                position: absolute;
+                color: white;
+                font-family: 'PhantomSans', sans-serif;
+                font-size: 18px;
+                text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+                pointer-events: none;
+                transform: translate(-50%, 0);
+                z-index: 101;
+                display: none;
+            }
         </style>
     </head>
     <body>
+        <div id="computer-label" class="hand-label">Computer</div>
+        <div id="player-label" class="hand-label">Player</div>
         <div class="overlay">
             <h1>Rock Paper Scissors</h1>
+            <div class="scores">
+                <div id="player-score">Player: 0</div>
+                <div id="computer-score">Computer: 0</div>
+            </div>
         </div>
         <div class="rules">
             <h2>Rules</h2>

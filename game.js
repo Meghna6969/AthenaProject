@@ -9,6 +9,11 @@ const renderer = new THREE.WebGLRenderer();
 const beforePlayModels = [];
 const cooldown_duration = 2000;
 let isPlayEnabled = true;
+let playerScore = 0;
+let computerScore = 0;
+
+const computerLabel = document.getElementById('computer-label');
+const playerLabel = document.getElementById('player-label');
 
 const MOUSE_MOVE_THRESHOLD = 0.05;
 const ORBIT_SPEED = 0.001;
@@ -67,14 +72,17 @@ function toggleControlMode(isDev = false){
 toggleControlMode(false);
 
 const toonMaterial = new THREE.MeshToonMaterial({
-    color: 0xf0f8ff,     
-    emissive: 0x406f9c,   
+    color: 0xfedcbd,     
+    emissive: 0xf0b09a,   
     emissiveIntensity: 1,
 });
 const toonMaterial2 = new THREE.MeshToonMaterial({
-    color: 0xf0f8ff,
-    emissive: 0xf0f8ff,
+    color: 0xc07a97,
+    emissive: 0xe26461,
     emissiveIntensity: 0.38
+});
+const toonMaterial3 = new THREE.MeshToonMaterial({
+    color: 0x53387c,
 });
 
 loader.load('./Cloud1.glb',
@@ -84,7 +92,7 @@ loader.load('./Cloud1.glb',
         model.position.set(140,40,-180);
         model.traverse((child) => {
             if (child.isMesh){
-                child.material = toonMaterial;
+                child.material = toonMaterial2;
             }
         })
         scene.add(model);
@@ -105,7 +113,7 @@ loader.load('./Cloud2.glb',
         model.position.set(-140, 30, -180);
         model.traverse((child) => {
             if(child.isMesh){
-                child.material = toonMaterial;
+                child.material = toonMaterial3;
             }
         })
         scene.add(model);
@@ -118,7 +126,7 @@ loader.load('./Cloud3.glb',
         model.position.set(-80, -30, -100);
         model.traverse((child) => {
             if(child.isMesh){
-                child.material = toonMaterial2;
+                child.material = toonMaterial3;
                 child.material.transparent = true;
                 child.material.opacity = 0.9;
             }
@@ -133,7 +141,7 @@ loader.load('./Cloud4.glb',
         model.position.set(30,-6,-150);
         model.traverse((child) => {
             if(child.isMesh){
-                child.material = toonMaterial2;
+                child.material = toonMaterial;
             }
         })
         scene.add(model);
@@ -181,11 +189,37 @@ const vertexShader = `
 
 const fragmentShader = `
 varying vec3 vWorldPosition;
+
+vec3 getGradientColor(float h) {
+    // Define your 5 colors here (from top to bottom)
+    vec3 color1 = vec3(0.243,0.349,0.69);  // Top color (light blue)
+    vec3 color2 = vec3(0.345,0.49,0.82);  // Upper middle
+    vec3 color3 = vec3(0.498,0.412,0.839);  // Middle
+    vec3 color4 = vec3(0.859,0.51,0.404);  // Lower middle
+    vec3 color5 = vec3(0.98,0.843,0.498); // Bottom color
+
+    // Adjust these thresholds to control the position of each color
+    float threshold1 = 0.8;
+    float threshold2 = 0.4;
+    float threshold3 = 0.0;
+    float threshold4 = -0.4;
+
+    if (h > threshold1) {
+        return mix(color2, color1, (h - threshold1) / (1.0 - threshold1));
+    } else if (h > threshold2) {
+        return mix(color3, color2, (h - threshold2) / (threshold1 - threshold2));
+    } else if (h > threshold3) {
+        return mix(color4, color3, (h - threshold3) / (threshold2 - threshold3));
+    } else if (h > threshold4) {
+        return mix(color5, color4, (h - threshold4) / (threshold3 - threshold4));
+    } else {
+        return color5;
+    }
+}
 void main() {
-    vec3 topColor = vec3(0.62, 0.89, 1.76); //Light blue
-    vec3 bottomColor = vec3(0.702, 0.953, 1); //Dark blue
     float h = normalize(vWorldPosition).y;
-    gl_FragColor = vec4(mix(bottomColor, topColor, max(h + 0.2, 0.0)), 1.0);
+    vec3 finalColor = getGradientColor(h + 0.2);
+    gl_FragColor = vec4(finalColor, 1.0);
 }`;
 
 
@@ -217,6 +251,39 @@ scene.add(fillLight);
 
 
 camera.position.set(0,0,0);
+
+function createStars(){
+    const starsGeometry = new THREE.BufferGeometry();
+    const starsMaterial = new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 1.5,
+        transparent: true,
+        opacity: 1,
+        sizeAttenuation: true
+    });
+
+    const starsVertices = [];
+    const radius = 290;
+    for(let i = 0; i < 2000; i++){
+        const u = Math.random();
+        const v = Math.random();
+        const theta = 2 * Math.PI * u;
+        const phi = Math.acos(2 * v - 1);
+        const x = radius * Math.sin(phi) * Math.cos(theta);
+        const y = radius * Math.sin(phi) * Math.sin(theta);
+        const z = radius * Math.cos(phi);
+        starsVertices.push(x,y,z);
+    }
+    starsGeometry.setAttribute(
+        'position',
+        new THREE.Float32BufferAttribute(starsVertices, 3)
+    );
+
+    const stars = new THREE.Points(starsGeometry, starsMaterial);
+    scene.add(stars)
+    return stars;
+}
+const stars = createStars();
 
 function shakeModels(callback) {
     const duration = 500;
@@ -283,6 +350,7 @@ async function switchModels(playerChoice){
     beforePlayModels.push(computerModel, playerModel);
 
     const result = determineWinner(playerChoice, computerChoice);
+    updateScoreDisplay();
 
     const overlay = document.querySelector('.overlay');
     const resultText = document.querySelector('h1');
@@ -303,6 +371,35 @@ async function switchModels(playerChoice){
         isPlayEnabled = true;
         setButtonsEnabled(true);
     }, cooldown_duration);
+}
+
+function updateLabelPosition(model, label, offset) {
+    if (!model || !label) {
+        if (label) label.style.display = 'none';
+        return;
+    }
+
+    const tempV = new THREE.Vector3();
+    model.updateWorldMatrix(true, false);
+    tempV.setFromMatrixPosition(model.matrixWorld).add(offset);
+
+    tempV.project(camera);
+
+    const x = (tempV.x * 0.5 + 0.5) * renderer.domElement.clientWidth;
+    const y = (tempV.y * -0.5 + 0.5) * renderer.domElement.clientHeight;
+
+    label.style.display = 'block';
+    label.style.left = `${x}px`;
+    label.style.top = `${y}px`;
+}
+
+function updateScoreDisplay() {
+    const playerScoreElement = document.getElementById('player-score');
+    const computerScoreElement = document.getElementById('computer-score');
+    if(playerScoreElement && computerScoreElement){
+        playerScoreElement.textContent = `Player ${playerScore}`;
+        computerScoreElement.textContent = `Computer: ${computerScore}`; 
+    }
 }
 function loadModel(modelPath, position, scale, isFlipped = false){
     return new Promise((resolve) => {
@@ -342,8 +439,10 @@ function determineWinner(playerChoice, computerChoice){
         return "Tie!";
     }
     if(rules[playerChoice].includes(computerChoice)){
+        playerScore++;
         return "You Win!";
     }
+    computerScore++;
     return "Computer Wins!";
 
 }
@@ -369,10 +468,24 @@ function animate(){
 
     camera.position.z = baseZ - horizontalRadius * (1 - Math.cos(currentX * Math.PI * 0.5));
 
+    if(stars.material instanceof THREE.PointsMaterial){
+        stars.material.opacity = 0.6 + Math.sin(Date.now() * 0.001) * 0.2;
+    }
     camera.lookAt(0, 0, -1);
+
+    if (beforePlayModels.length === 2) {
+        const labelOffset = new THREE.Vector3(0, -0.3, 0);
+        updateLabelPosition(beforePlayModels[0], computerLabel, labelOffset);
+        updateLabelPosition(beforePlayModels[1], playerLabel, labelOffset);
+    } else {
+        if(computerLabel) computerLabel.style.display = 'none';
+        if(playerLabel) playerLabel.style.display = 'none';
+    }
 
     controls.update();
     renderer.render(scene, camera);
+
+
 }
 animate();
 camera.position.set(0, 0, 0.1);
