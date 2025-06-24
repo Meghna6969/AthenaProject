@@ -7,6 +7,16 @@ const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerH
 const loader = new GLTFLoader();
 const renderer = new THREE.WebGLRenderer();
 const beforePlayModels = [];
+const cooldown_duration = 2000;
+let isPlayEnabled = true;
+
+const MOUSE_MOVE_THRESHOLD = 0.05;
+const ORBIT_SPEED = 0.001;
+let targetX = 0;
+let targetY = 0;
+let currentX = 0;
+let currentY = 0;
+
 const MODEL_PATHS = {
     'Rock': './Rock.glb',
     'Paper': './Paper.glb',
@@ -15,10 +25,10 @@ const MODEL_PATHS = {
     'Lizard': './Lizard.glb'
 }
 
-const axesHelper = new THREE.AxesHelper(5);
-scene.add(axesHelper);
-const gridHelper = new THREE.GridHelper(100, 10);
-scene.add(gridHelper);
+//const axesHelper = new THREE.AxesHelper(5);
+//scene.add(axesHelper);
+//const gridHelper = new THREE.GridHelper(100, 10);
+//scene.add(gridHelper);
 
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
@@ -32,6 +42,7 @@ const defaultSettings = {
     minPolarAngle: Math.PI / 2.5,
     enableZoom: false,
     enablePan: false,
+    enabled: false,
     minAzimuthAngle: -Math.PI / 4,
     maxAzimuthAngle: Math.PI / 4
 }
@@ -128,11 +139,12 @@ loader.load('./Cloud4.glb',
         scene.add(model);
     }
 )
+//Computer hand
 loader.load('./Rock.glb',
     function(gltf){
         const model = gltf.scene;
-        model.position.set(-0.5,0,-2);
-        model.scale.set(0.01,0.01,0.01);
+        model.position.set(-0.7,0,-2);
+        model.scale.set(0.02,0.02,0.02);
         model.traverse((child) => {
             if(child.isMesh){
                 child.material.emissive = new THREE.Color(0xa35e48);
@@ -143,11 +155,12 @@ loader.load('./Rock.glb',
         scene.add(model);
     }
 )
+//Player hand
 loader.load('./Rock.glb',
     function(gltf){
         const model = gltf.scene;
-        model.position.set(0.5,0,-2);
-        model.scale.set(-0.01,0.01,0.01);
+        model.position.set(0.7,0,-2);
+        model.scale.set(-0.02,0.02,0.02);
         model.traverse((child) => {
             if(child.isMesh){
                 child.material.emissive = new THREE.Color(0xa35e48);
@@ -169,7 +182,7 @@ const vertexShader = `
 const fragmentShader = `
 varying vec3 vWorldPosition;
 void main() {
-    vec3 topColor = vec3(0.173, 0.498, 0.757); //Light blue
+    vec3 topColor = vec3(0.62, 0.89, 1.76); //Light blue
     vec3 bottomColor = vec3(0.702, 0.953, 1); //Dark blue
     float h = normalize(vWorldPosition).y;
     gl_FragColor = vec4(mix(bottomColor, topColor, max(h + 0.2, 0.0)), 1.0);
@@ -209,6 +222,8 @@ function shakeModels(callback) {
     const duration = 500;
     const startTime = Date.now();
 
+    setButtonsEnabled(false);
+
     function animate(){
         const elasped = Date.now() - startTime;
         const progress = elasped / duration;
@@ -237,24 +252,57 @@ function shakeModels(callback) {
 
     animate();
 }
-async function switchModels(choice){
-    const leftPos = new THREE.Vector3(-0.5, 0, -2);
-    const rightPos = new THREE.Vector3(0.5, 0, -2);
-    const scale = 0.01;
+function setButtonsEnabled(enabled) {
+    document.querySelectorAll('.options button').forEach(button => {
+        button.diabled = !enabled;
+        button.style.opacity = enabled ? '1' : '0.5';
+        button.style.cursor = enabled ? 'pointer' : 'not-allowed';
+    });
+}
+async function switchModels(playerChoice){
+    if(!isPlayEnabled) return;
+    isPlayEnabled = false;
+
+    const computerChoice = getComputerChoice();
+    const leftPos = new THREE.Vector3(-0.7, 0, -2);
+    const rightPos = new THREE.Vector3(0.7, 0, -2);
+    const scale = 0.02;
 
     beforePlayModels.forEach(model => {
         scene.remove(model);
     });
     beforePlayModels.length = 0;
 
-    const [leftModel, rightModel] = await Promise.all([
-        loadModel(MODEL_PATHS[choice], leftPos, scale, false),
-        loadModel(MODEL_PATHS[choice], rightPos, scale, true)
+    const [computerModel, playerModel] = await Promise.all([
+        loadModel(MODEL_PATHS[computerChoice], leftPos, scale, false),
+        loadModel(MODEL_PATHS[playerChoice], rightPos, scale, true)
     ]);
 
-    scene.add(leftModel);
-    scene.add(rightModel);
-    beforePlayModels.push(leftModel, rightModel);
+    scene.add(computerModel);
+    scene.add(playerModel);
+    beforePlayModels.push(computerModel, playerModel);
+
+    const result = determineWinner(playerChoice, computerChoice);
+
+    const overlay = document.querySelector('.overlay');
+    const resultText = document.querySelector('h1');
+    resultText.style.fontSize = '32px';
+    resultText.style.marginTop = '20px';
+    resultText.textContent = `${result}`;
+
+    const oldResult = overlay.querySelector('p');
+    if(oldResult){
+        overlay.removeChild(oldResult);
+    }
+
+    overlay.appendChild(resultText);
+
+    console.log(`Computer chose: ${computerChoice}, Player chose: ${playerChoice}`);
+    console.log(result);
+    setTimeout(() => {
+        isPlayEnabled = true;
+        setButtonsEnabled(true);
+    }, cooldown_duration);
 }
 function loadModel(modelPath, position, scale, isFlipped = false){
     return new Promise((resolve) => {
@@ -276,13 +324,60 @@ function loadModel(modelPath, position, scale, isFlipped = false){
         })
     })
 }
+function getComputerChoice(){
+    const choices = ['Rock', 'Paper', 'Scissors', 'Spock', 'Lizard'];
+    const randomIndex = Math.floor(Math.random() * choices.length);
+    return choices[randomIndex];
+}
+function determineWinner(playerChoice, computerChoice){
+    const rules = {
+        'Rock': ['Scissors', 'Lizard'],
+        'Paper': ['Rock', 'Spock'],
+        'Scissors': ['Paper', 'Lizard'],
+        'Spock': ['Scissors', 'Rock'],
+        'Lizard': ['Spock', 'Paper']
+    };
+
+    if(playerChoice === computerChoice){
+        return "Tie!";
+    }
+    if(rules[playerChoice].includes(computerChoice)){
+        return "You Win!";
+    }
+    return "Computer Wins!";
+
+}
+function setupMouseMove(){
+    document.addEventListener('mousemove', (event) => {
+        targetX = (event.clientX / window.innerWidth) * 2 - 1;
+        targetY = -((event.clientY / window.innerHeight) * 2 - 1);
+    });
+}
 
 function animate(){
     requestAnimationFrame(animate);
+
+    currentX += (targetX - currentX) * MOUSE_MOVE_THRESHOLD;
+    currentY += (targetY - currentY) * MOUSE_MOVE_THRESHOLD;
+
+    const horizontalRadius = 0.15;
+    const verticalMovement = 0.1;
+    const baseZ = 2;
+
+    camera.position.x = horizontalRadius * Math.sin(currentX * Math.PI * 0.5);
+    camera.position.y = currentY * verticalMovement;
+
+    camera.position.z = baseZ - horizontalRadius * (1 - Math.cos(currentX * Math.PI * 0.5));
+
+    camera.lookAt(0, 0, -1);
+
     controls.update();
     renderer.render(scene, camera);
 }
 animate();
+camera.position.set(0, 0, 0.1);
+setupMouseMove();
+
 
 window.addEventListener('keydown', (event) => {
     if(event.key.toLowerCase() === 'd'){
@@ -296,9 +391,10 @@ window.addEventListener('keydown', (event) => {
 })
 document.querySelectorAll('.options button').forEach(button => {
     button.addEventListener('click', () => {
-        const choice = button.textContent;
+        if(!isPlayEnabled) return;
+        const playerChoice = button.textContent;
         shakeModels(() => {
-            switchModels(choice);
+            switchModels(playerChoice);
         });
     });
 });

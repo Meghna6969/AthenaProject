@@ -4,8 +4,8 @@
         <title>Rock Paper Scissors Spock Lizard</title>
         <style>
             @font-face{
-                font-family: 'LuckiestGuy';
-                src: url('./LuckiestGuy.ttf') format('truetype');
+                font-family: 'PhantomSans';
+                src: url('./PhantomSans-Regular.ttf') format('truetype');
                 font-weight: normal;
                 font-style: normal;
             }
@@ -24,7 +24,7 @@
                 left: 50%;
                 transform: translate(-50%, 0%);
                 color: rebeccapurple;
-                font-family:'LuckiestGuy';
+                font-family:'PhantomSans';
                 font-size: 24px;
                 z-index: 100;
                 text-align: center;
@@ -35,14 +35,17 @@
                 left: 40px;
                 transform: translateY(-50%);
                 color: white;
-                font-family: 'LuckiestGuy';
+                font-family: 'PhantomSans';
                 font-size: 24px;
-                text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+                
                 z-index: 100;
                 text-align: left;
-                background-color: rgba(0,0,0,0.3);
+                background-color: rgba(255, 255, 255, 0.1);
                 padding: 20px;
-                border-radius: 10px;
+                border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
             }
             .rules h2 {
                 margin-bottom: 1rem;
@@ -69,9 +72,10 @@
                 justify-content: space-around;
             }
             .options button {
+                transition: opacity 0.3s ease;
                 background-color: purple;
                 color: #ffffff;
-                font-family: 'LuckiestGuy';
+                font-family: 'PhantomSans';
                 border: 2px solid #fff;
                 padding: 1em 2em;
                 border-radius: 10px;
@@ -84,12 +88,17 @@
                 box-shadow: 0 4px 6px rgba(0,0,0,0.2);
 
             }
+            .options button:disabled {
+                opacity: 0.5;
+                cursor: not-allowed;
+            }
             .options button:hover {
                 background-color: rgba(0, 139, 139, 0.9);
                 border: 2px solid #ffffff;
                 transform: translateY(-2px);
                 box-shadow: 0 6px 8px rgba(0,0,0,0.3);
             }
+            
             .options button:active {
                 transform: translateY(1px);
                 box-shadow: 0 2px 4px rgba(0,0,0,0.2);
